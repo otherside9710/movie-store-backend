@@ -1,0 +1,58 @@
+image: node:latest
+
+stages:
+  - build
+#  - test
+  - build_image
+  - deploy
+
+cache:
+  paths:
+    - node_modules/
+
+build:
+  stage: build
+  script:
+    - npm install
+  artifacts:
+    paths:
+      - node_modules/
+
+#testing:
+#  stage: test
+#  script: npm test
+
+build_image:
+  stage: build_image
+  image: docker:latest
+  variables:
+    DOCKER_DRIVER: overlay2
+  services:
+    - docker:dind
+  script:
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com
+    - docker build -t registry.gitlab.com/dev-ext/videomanolo-backend .
+    - docker push registry.gitlab.com/dev-ext/videomanolo-backend
+  only:
+    - master
+  except:
+    - tag
+
+deploy-cloud-server:
+  stage: deploy
+  image: docker:latest
+  variables:
+    DOCKER_DRIVER: overlay2
+  services:
+    - docker:dind
+  script:
+    - echo "Deploying app to the server container"
+    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
+    - docker pull registry.gitlab.com/dev-ext/videomanolo-backend:latest
+    - docker stop videomanolo-backend
+    - docker rm videomanolo-backend
+    - docker run -e "TOKEN_PRIVATE_KEY=XXXXXX" -e "DB_USERNAME=XXXXXXX" -e "DB_PASSWORD=XXXXX" -e "DB_HOST=clusterXXXXXXXX" -e "DB_NAME=video-manolo" -d --name videomanolo-backend -p 3000:3000 registry.gitlab.com/dev-ext/videomanolo-backend:latest
+  only:
+    - master
+  tags:
+    - videomanolo-backend

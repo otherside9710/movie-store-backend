@@ -1,0 +1,33 @@
+version: '3'
+
+services:
+  nodejs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: movie-store-backend
+    container_name: movie-store-backend
+    restart: unless-stopped
+    environment:
+      - DB_USERNAME=XXXXX
+      - DB_PASSWORD=XXXXX
+      - DB_HOST=clusterXXXXX
+      - DB_NAME=movie-store
+      - TOKEN_PRIVATE_KEY=XXXXX
+    hostname: movie-store-backend-app
+    ports:
+      - "3000:3000"
+      - "9292:9292"
+    volumes:
+      - .:/usr/src/app
+      - node_modules:/usr/src/app/node_modules
+    networks:
+      - app-network
+    command: npm start
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  node_modules:
